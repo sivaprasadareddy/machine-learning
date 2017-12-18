@@ -1,0 +1,122 @@
+---
+title: "MLpresentation - RISHI, SIVAPRASAD"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(knitr)
+```
+
+
+# Predicting telicom churn using classification 
+
+### Customer churn is one of the mounting issues of today’s rapidly growing and competetive telecom sector, the focus of the telecom sector has shifted from acquiring new customer to retaining existing customers because of the associated high cost and saturation of the market, The retention of existing customers also leads to improved sales and reduced marketing cost as compared to new customers. These facts have ultimately resulted in customer churn.
+
+###Customer churn is shifting from one service provider to next competitor in the market.It is a key challenge in high competitive markets, which is highly observed in telecommunication sector.the following three types of customer churns;
+###Active churner (Volunteer): Those customers who want to quit the contract and move to the next provider. 
+
+###Passive churner (Non-Volunteer): When the company discontinues the service to acustomer.
+
+###Rotational churner(Silent): Those customers who discontinued the contract without prior knowledge of both parties (customer-company).
+
+### Today, our goal is to identify trends in customer churn at a telecom company. The data we are using  contains 3,333 observations and 23 variables extracted from a data warehouse. The dataset contains demographic as well as usage data of various customers. By creating a predictive model using decision trees, we will be able to detect churn before it happens and take action to minimize it.
+
+# The machine learning algorithm we are using is "decision tree" 
+
+```{r}
+churn <- read.csv("C:/Users/Administrator/Desktop/ML_Presentation/churn.txt")
+```
+
+```{r}
+str(churn)
+```
+
+```{r}
+table(churn$Churn.)
+prop.table(table(churn$Churn.))
+```
+# WORKING OF THE ALGORITHM 
+
+
+```{r}
+library(tree)
+treemodel = tree( Churn.~.-State-Phone,data = churn)
+summary(treemodel)
+```
+```{r}
+plot(treemodel)
+text(treemodel,pretty = 0)
+```
+
+```{r}
+churn$predicted = predict(treemodel,data = churn,type = "class")
+cm = print(table(churn$predicted,churn$Churn.,dnn = c("predicted","actual")))
+```
+
+```{r}
+accuracy = print((cm[2,2] + cm[1,1])/sum(cm)*100)
+```
+```{r}
+sensitivity = print(cm[2,2]/(cm[2,2]+cm[1,2])*100)
+```
+
+```{r}
+specificity = print(cm[1,1]/(cm[1,1]+cm[2,1])*100)
+```
+### Notice, that our accuracy rate of ~94% is in line with the error rate from the tree output. All the accuracy and error rates and we will get 1. (Makes sense, since error rate = 100 - accuracy rate). Also it looks like our model does better at predicting customers that do not churn. Not surprising, considering that approximately 86% of customers did not churn. However we would have liked to see a better sensitivity rate as we are more interested in predicting customers who churn.
+
+### With decision trees with many terminal nodes, we run the risk of overfitting the data. A tree with fewer branches will reduce model variance at the cost of some bias. Ideally, we want to build a tree where every node is determined based on the lowest error rate. One way to do this is to grow a large tree and then prune back using cross-validation on the dataset.We can do this by using the cv.tree() function. This function utilizes cross-validation to determine the optimal number of tree levels. This method is also known as cost complexity pruning.
+
+
+```{r}
+set.seed(100)
+treevalidate = cv.tree(object = treemodel,FUN= prune.misclass)
+treevalidate
+```
+```{r}
+plot(x= treevalidate$size,y= treevalidate$dev,type = "b")
+```
+
+### Next,lets prune the tree using the prune,misclass function
+
+```{r}
+treemodel2 = prune.misclass(treemodel,best = 10)
+plot(treemodel2)
+text(treemodel2,pretty = 0)
+```
+
+```{r}
+churn$predicted2 = predict(treemodel2,data = churn,type = "class")
+cm2 = print(table(churn$predicted2,churn$Churn.,dnn = c(" predicted","actual")))
+```
+
+```{r}
+accuracy2 = print((cm2[2,2] + cm2[1,1])/sum(cm2)*100)
+```
+
+```{r}
+sensitivity2 = print(cm2[2,2]/(cm2[2,2]+cm2[1,2])*100)
+```
+
+```{r}
+specificity2 = print(cm2[1,1]/(cm2[1,1]+cm2[2,1])*100)
+```
+ 
+### As we can see, pruning the tree to 11 nodes resulted in an improvement to sensitivity at a slight cost to specificity and model accuracy. 
+
+
+
+
+
+
+
+
+
+
+
+
+
