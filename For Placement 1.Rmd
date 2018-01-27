@@ -1,0 +1,255 @@
+---
+title: "Bank Churn Dataset for Machinhe Learning Prediction"
+author: "sivaprasadareddy.korsapati"
+date: "26 January 2018"
+output: html_document
+---
+
+### We need to predict whether a person will leave the bank or not. To predict that we will be applying some algorithm to get a good accuracy and make the prediction better :
+
+### Xgboosting
+### K- Fold cross Validation
+### Neural - Network
+### KNN
+### Naive Bayes
+### Logistic Regression
+
+
+### Data Pre-processing :
+
+```{r}
+churn= read.csv("C:/Users/Administrator/Desktop/data_sets/Churn.csv")
+churn= churn[,4:14]
+churn$Geography=as.numeric(factor(churn$Geography,levels = c("France","Spain","Germany"),labels = c(1,2,3)))
+churn$Gender=as.numeric(factor(churn$Gender,levels = c("Male","Female"),labels = c(1,2)))
+sum(!complete.cases(churn))
+str(churn)
+sample_data= sample.int(n=nrow(churn),size = floor(0.80*nrow(churn)),replace = F)
+train_data=churn[sample_data,]
+test_data=churn[-sample_data,]
+
+train_data[-11] = scale(train_data[-11])
+test_data[-11] = scale(test_data[-11])
+```
+
+
+### Xgboost :
+
+```{r}
+#install.packages("xgboost")
+library(xgboost)
+my_model = xgboost(as.matrix(train_data[-11]),label = train_data$Exited,nrounds = 10)
+my_model
+pred_model = predict(my_model,as.matrix(test_data[-11]))
+pred_model = ifelse(pred_model>0.50,1,0)
+confusion_matrix = table(test_data$Exited,pred_model)
+Accuracy = sum(diag(confusion_matrix))*100/sum(confusion_matrix)
+Accuracy
+```
+
+### Neural - network :
+
+
+```{r}
+install.packages("h2o")
+library(h2o)
+h2o.init(nthreads = -1)
+``` 
+
+
+```{r}
+my_model = h2o.deeplearning(y="Exited",training_frame = as.h2o(train_data),activation = "Rectifier",hidden = c(6,6),epochs = 100,train_samples_per_iteration = -2)
+pred_model=h2o.predict(my_model,as.h2o(test_data[-11]))
+pred_model=(pred_model>0.50)
+pred_model=as.vector(pred_model)
+confusion_matrix=table(test_data$Exited,pred_model)
+Accuracy =sum(diag(confusion_matrix))/sum(confusion_matrix)
+Accuracy
+
+```
+
+
+```{r}
+h2o.shutdown()
+```
+
+
+
+### KNN :
+
+```{r}
+library(class)
+my_model= knn(train = train_data[-11], test = test_data[-11], cl=train_data$Exited,k=7)
+cm= table(test_data$Exited,my_model)
+Accuracy = sum(diag(cm))/sum(cm)
+Accuracy
+
+```
+
+
+### K-Fold- Cross- Validation :
+
+```{r}
+library(caret)
+folds= createFolds(train_data$Exited,k= 10)
+shaswata = lapply(folds, function(x){
+  train_fold = train_data[-x,]
+  test_fold =train_data[x,]
+  library(xgboost)
+my_model = xgboost(as.matrix(train_fold[-11]),label = train_fold$Exited,nrounds = 10)
+pred_model = predict(my_model,as.matrix(test_fold[-11]))
+pred_model = ifelse(pred_model>0.50,1,0)
+confusion_matrix = table(test_fold$Exited,pred_model)
+Accuracy = sum(diag(confusion_matrix))*100/sum(confusion_matrix)
+return(Accuracy)
+  
+})
+
+mean(as.numeric(shaswata))
+```
+
+### Logistic Regression :
+
+```{r}
+my_model = glm(Exited~.,data =train_data,family = binomial)
+pred_model =predict(my_model,type = "response",newdata = test_data[-11])
+pred_model = ifelse(pred_model>0.50,1,0)
+rick=data.frame(test_data$Balance,test_data$CreditScore,pred_model)
+colnames(rick) =c("Balance","CreditScore","Level")
+library(dplyr)
+library(ggplot2)
+library(plotly)
+rick=mutate(rick,Level =if_else(Level==1,"Above","Below"))
+g=ggplot(rick) + geom_point(aes(x=Balance,y=CreditScore,col=Level)) + theme_bw()
+g
+```
+
+### Naive- Bayes :
+
+```{r}
+churn= read.csv("C:/Users/Administrator/Desktop/data_sets/Churn.csv")
+churn= churn[,4:14]
+churn$Geography=as.numeric(factor(churn$Geography,levels = c("France","Spain","Germany"),labels = c(1,2,3)))
+churn$Gender=as.numeric(factor(churn$Gender,levels = c("Male","Female"),labels = c(1,2)))
+sum(!complete.cases(churn))
+churn$Exited=as.factor(churn$Exited)
+str(churn)
+sample_data= sample.int(n=nrow(churn),size = floor(0.80*nrow(churn)),replace = F)
+train_data=churn[sample_data,]
+test_data=churn[-sample_data,]
+
+train_data[-11] = scale(train_data[-11])
+test_data[-11] = scale(test_data[-11])
+library(e1071)
+my_model = naiveBayes(Exited~.,data = train_data)
+summary(my_model)
+
+pred_model = predict(my_model,newdata = test_data[-11])
+cm=table(test_data$Exited,pred_model)
+Accuracy =sum(diag(cm))/sum(cm)
+Accuracy
+```
+
+
+### Multinomial Regression :
+
+### Data-Preprocessing :
+
+```{r}
+wheet= read.csv("C:/Users/Administrator/Desktop/data_sets/wheet.csv", stringsAsFactors=FALSE)
+sum(!complete.cases(wheet))
+str(wheet)
+
+wheet$variety =as.factor(wheet$variety)
+wheet$variety =relevel(wheet$variety, ref = "1")
+
+sample_data = sample.int(n=nrow(wheet),size = floor(0.75*nrow(wheet)),replace = F)
+train_data =wheet[sample_data,]
+test_data =wheet[-sample_data,]
+train_data[-8] =scale(train_data[-8])
+test_data[-8] = scale(test_data[-8])
+
+```
+
+```{r}
+install.packages("nnet")
+library(nnet)
+my_model = multinom(variety~.,data = train_data)
+pred_model =predict(my_model,test_data[-8])
+Cm=table(test_data$variety,pred_model)
+Model_Accuracy=sum(diag(Cm))/sum(Cm)
+Model_Accuracy
+
+```
+
+
+### Clustering :
+
+
+```{r}
+wheet= read.csv("C:/Users/Administrator/Desktop/data_sets/wheet.csv", stringsAsFactors=FALSE)
+wheet$variety=NULL
+
+set.seed(35)
+a=c()
+b=c()
+c=c()
+for(i in 1:11){
+my_cluster =kmeans(wheet,i,nstart = 20)
+a=append(a,i)
+b=append(b,my_cluster$tot.withinss)
+}
+c=data.frame(a,b)
+ggplot(c) + geom_point(aes(a,b,group=1),col="blue") + geom_line(aes(a,b,group=1)) + theme_classic() + labs(x="Number of Cluster", y="WCSS")
+## This is called elbow method we have ploted to know the number of cluster we should adopt.
+```
+
+### 
+
+```{r}
+wheet = wheet[,1:2]
+wheet
+set.seed(35)
+clustering = kmeans(wheet,6,nstart = 20)
+library(cluster)
+cluster_plot = clusplot(wheet,clustering$cluster,color = T,plotchar = F,shade = T,lines = 0,labels = 2,xlab = "asymmetry_coefficient", ylab = "length_kernel_groove")
+cluster_plot
+
+```
+
+
+### Regression Based Model :
+
+```{r}
+salary = read.csv("C://Users//Administrator//Desktop//Salary_Data.csv",header = T)
+sample_data=sample.int(n=nrow(salary),size = floor(0.80*nrow(salary)),replace = F)
+train_data =salary[sample_data,]
+test_data = salary[-sample_data,]
+
+my_model = lm(Salary~.,data =train_data)
+pred_model =predict(my_model,newdata = test_data)
+
+
+ggplot() + geom_point(aes(x=salary$YearsExperience,y=salary$Salary,group=1),col="red") + geom_line(aes(x=train_data$YearsExperience,y=predict(my_model,train_data))) + theme_bw() + labs(x="Years of Experience",y='Salary')
+```
+
+### Multiple Linear Regression :
+
+```{r}
+invest = read.csv("C://Users//Administrator//Desktop//Dataset//50_Startup.csv",header = T)
+invest$State=as.numeric(factor(invest$State,levels = c("New York","California","Florida"),labels = c(1,2,3)))
+
+sum(!complete.cases(invest))
+sample_data = sample.int(n=nrow(invest),size = floor(0.80*nrow(invest)),replace = F)
+train_data = invest[sample_data,]
+test_data = invest[-sample_data,]
+
+my_model = lm(Profit~.,data =train_data)
+summary(my_model)
+pred_model = predict(my_model,newdata = test_data)
+pred_model
+```
+
+
+
+
